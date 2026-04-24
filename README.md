@@ -7,6 +7,8 @@ core scheduling, RAM usage, etc.
 
 Ferrite uses the following stack:
 
-**UI/Control Panel App:** WinUI 3
-**Core/Backend:** Rust
-**Pattern Analysis:** Intel OpenVINO/GNA
+**- UI/Control Panel App:** WinUI 3
+
+**- Core/Backend:** Rust
+
+**- Pattern Analysis:** Intel OpenVINO/GNA
