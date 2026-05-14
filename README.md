@@ -11,4 +11,9 @@ Ferrite uses the following stack:
 
 **- Core/Backend:** Rust
 
-**- Pattern Analysis:** Intel OpenVINO/GNA
+**- Pattern Analysis:** Intel® Core™ Ultra built-in NPU with OpenVINO™
+
+## Prerequisites
+
+Ferrite requires Intel® Core™ Ultra platform, specifically its NPU, for low-power, non-disruptive real-time inference of pattern analysis model. 
+Processors after Intel® Core™ i series 10th Gen(Ice Lake) may use Gaussian & Neural Accelerator(GNA) for inference acceleration.
