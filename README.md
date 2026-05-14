@@ -15,5 +15,5 @@ Ferrite uses the following stack:
 
 ## Prerequisites
 
-Ferrite requires Intel® Core™ Ultra platform, specifically its NPU, for low-power, non-disruptive real-time inference of pattern analysis model. 
-Processors after Intel® Core™ i series 10th Gen(Ice Lake) may use Gaussian & Neural Accelerator(GNA) for inference acceleration.
+Ferrite requires Intel® Core™ Ultra platform(Meteor Lake and after), specifically its NPU, for low-power, non-disruptive real-time inference of pattern analysis model. 
+Intel® Core™ i series 10th Gen and after(Ice Lake and after) may use Gaussian & Neural Accelerator(GNA) for inference acceleration.
