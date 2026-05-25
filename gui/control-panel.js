@@ -6,6 +6,7 @@ const {
   QLabel,
   QPushButton,
   QLineEdit,
+  QScrollArea,
   FlexLayout,
 } = require("@nodegui/nodegui");
 
@@ -196,6 +197,10 @@ function main() {
   root.setObjectName("root");
   const layout = new FlexLayout();
   root.setLayout(layout);
+  const scrollArea = new QScrollArea();
+  scrollArea.setObjectName("scrollArea");
+  scrollArea.setWidget(root);
+  scrollArea.setWidgetResizable(true);
 
   const eyebrow = makeLabel("NPU WORKLOAD INTELLIGENCE", "eyebrow");
   const title = makeLabel("Ferrite Control", "title");
@@ -287,6 +292,10 @@ function main() {
       color: #eaf8ff;
       font-family: Consolas;
     }
+    #scrollArea {
+      border: 0px;
+      background-color: #071014;
+    }
     #eyebrow {
       color: #46f0c2;
       font-size: 11px;
@@ -366,7 +375,7 @@ function main() {
     }
   `);
 
-  win.setCentralWidget(root);
+  win.setCentralWidget(scrollArea);
   win.show();
   global.ferriteControlWindow = win;
 }
