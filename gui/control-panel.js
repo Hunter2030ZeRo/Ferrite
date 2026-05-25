@@ -18,14 +18,30 @@ function setText(label, value) {
   label.setText(String(value));
 }
 
-function ferriteArgs(mode, modelXml, noPredictionLog) {
-  const args = ["--mode", mode, "--interval-ms", "1000"];
+function timestamp() {
+  return new Date().toLocaleTimeString("en-SG", { hour12: false });
+}
 
-  if (mode === "infer") {
-    args.push("--model-xml", modelXml);
+function appendLog(logLabel, message) {
+  const current = logLabel.text();
+  const next = `[${timestamp()}] ${message}`;
+  const lines = `${current}\n${next}`.trim().split("\n").slice(-14);
+  logLabel.setText(lines.join("\n"));
+}
+
+function ferriteArgs(mode, config) {
+  const args = ["--mode", mode, "--interval-ms", config.interval.text()];
+
+  if (mode === "train") {
+    args.push("--output", config.rawOutput.text());
+    args.push("--features-output", config.featureOutput.text());
+    args.push("--no-predictions");
+  } else {
+    args.push("--model-xml", config.modelInput.text());
     args.push("--ov-cache", "ov_cache");
     args.push("--require-openvino");
-    if (noPredictionLog) {
+    args.push("--runtime-window", config.windowInput.text());
+    if (config.noPredictionLog) {
       args.push("--no-predictions");
     }
   }
@@ -49,111 +65,217 @@ function runOnce(args, onDone) {
   });
 }
 
-function startDaemon(args, labels) {
-  if (daemon) {
+function parseStatusLine(text) {
+  const firstJson = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .find(line => line.startsWith("{") && line.endsWith("}"));
+  if (!firstJson) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(firstJson);
+  } catch {
+    return null;
+  }
+}
+
+function updateStatusCards(status, cards) {
+  if (!status) {
     return;
   }
 
+  setText(cards.mode, status.mode || "-");
+  setText(cards.device, status.device || "-");
+  setText(cards.window, `${status.window_len}/${status.window_capacity}`);
+  setText(cards.predictions, String(status.prediction_rows ?? 0));
+  setText(cards.optimization, status.optimization || "observe");
+  setText(cards.persist, status.raw_persisted ? "TRAINING LOG" : "MEMORY ONLY");
+}
+
+function startDaemon(mode, config, cards, logLabel) {
+  if (daemon) {
+    appendLog(logLabel, "Ferrite is already running");
+    return;
+  }
+
+  const args = ferriteArgs(mode, config);
   daemon = spawn(ferriteExe, args, { cwd: rootDir, windowsHide: true });
-  setText(labels.state, `Running ${args.includes("infer") ? "infer" : "train"}`);
-  setText(labels.command, `ferrite ${args.join(" ")}`);
+  setText(cards.state, "ONLINE");
+  setText(cards.command, `ferrite ${args.join(" ")}`);
+  appendLog(logLabel, `started ${mode} mode`);
 
   daemon.stdout.on("data", chunk => {
     const text = chunk.toString().trim();
     if (text) {
-      setText(labels.status, text);
+      const parsed = parseStatusLine(text);
+      updateStatusCards(parsed, cards);
+      appendLog(logLabel, text);
     }
   });
 
   daemon.stderr.on("data", chunk => {
     const text = chunk.toString().trim();
     if (text) {
-      setText(labels.status, text);
+      appendLog(logLabel, text);
     }
   });
 
   daemon.on("close", code => {
-    setText(labels.state, `Stopped (${code})`);
+    setText(cards.state, `OFFLINE (${code})`);
+    appendLog(logLabel, `daemon stopped with code ${code}`);
     daemon = null;
   });
 }
 
-function stopDaemon(labels) {
+function stopDaemon(cards, logLabel) {
   if (!daemon) {
-    setText(labels.state, "Stopped");
+    setText(cards.state, "OFFLINE");
+    appendLog(logLabel, "daemon is not running");
     return;
   }
 
   daemon.kill();
   daemon = null;
-  setText(labels.state, "Stopping...");
+  setText(cards.state, "STOPPING");
+  appendLog(logLabel, "stop requested");
 }
 
-function makeLabel(text) {
+function makeLabel(text, objectName) {
   const label = new QLabel();
   label.setText(text);
+  if (objectName) {
+    label.setObjectName(objectName);
+  }
   return label;
+}
+
+function makeInput(value) {
+  const input = new QLineEdit();
+  input.setText(value);
+  return input;
+}
+
+function makeButton(text) {
+  const button = new QPushButton();
+  button.setText(text);
+  return button;
+}
+
+function makePanel(title) {
+  const panel = new QWidget();
+  panel.setObjectName("panel");
+  const layout = new FlexLayout();
+  panel.setLayout(layout);
+  layout.addWidget(makeLabel(title, "panelTitle"));
+  return { panel, layout };
+}
+
+function addField(layout, label, input) {
+  layout.addWidget(makeLabel(label, "fieldLabel"));
+  layout.addWidget(input);
+}
+
+function addMetric(layout, label, valueLabel) {
+  const row = new QWidget();
+  row.setObjectName("metricRow");
+  const rowLayout = new FlexLayout();
+  row.setLayout(rowLayout);
+  rowLayout.addWidget(makeLabel(label, "metricName"));
+  rowLayout.addWidget(valueLabel);
+  layout.addWidget(row);
 }
 
 function main() {
   const win = new QMainWindow();
   win.setWindowTitle("Ferrite Control");
-  win.resize(760, 460);
+  win.resize(940, 680);
 
   const root = new QWidget();
   root.setObjectName("root");
   const layout = new FlexLayout();
   root.setLayout(layout);
 
-  const title = makeLabel("Ferrite Control");
-  title.setObjectName("title");
+  const eyebrow = makeLabel("NPU WORKLOAD INTELLIGENCE", "eyebrow");
+  const title = makeLabel("Ferrite Control", "title");
+  const subtitle = makeLabel("Telemetry capture, TCN inference, and conservative optimization control.", "subtitle");
 
-  const modelLabel = makeLabel("Model XML");
-  const modelInput = new QLineEdit();
-  modelInput.setText("C:/Users/ss_ch/Downloads/ferrite_tcn_fixed.xml");
+  const cards = {
+    state: makeLabel("OFFLINE", "stateValue"),
+    mode: makeLabel("-", "metricValue"),
+    device: makeLabel("-", "metricValue"),
+    window: makeLabel("0/60", "metricValue"),
+    predictions: makeLabel("0", "metricValue"),
+    optimization: makeLabel("observe", "metricValue"),
+    persist: makeLabel("MEMORY ONLY", "metricValue"),
+    command: makeLabel("ferrite", "commandText"),
+  };
 
-  const state = makeLabel("Stopped");
-  const status = makeLabel("Ready");
-  const command = makeLabel("ferrite");
+  const config = {
+    modelInput: makeInput("C:/Users/ss_ch/Downloads/ferrite_tcn_fixed.xml"),
+    rawOutput: makeInput("ferrite_log.csv"),
+    featureOutput: makeInput("ferrite_tcn_features.csv"),
+    interval: makeInput("1000"),
+    windowInput: makeInput("60"),
+    noPredictionLog: true,
+  };
 
-  const startTrain = new QPushButton();
-  startTrain.setText("Start Training Log");
+  const statusPanel = makePanel("Runtime Status");
+  addMetric(statusPanel.layout, "State", cards.state);
+  addMetric(statusPanel.layout, "Mode", cards.mode);
+  addMetric(statusPanel.layout, "Device", cards.device);
+  addMetric(statusPanel.layout, "Window", cards.window);
+  addMetric(statusPanel.layout, "Predictions", cards.predictions);
+  addMetric(statusPanel.layout, "Optimization", cards.optimization);
+  addMetric(statusPanel.layout, "Persistence", cards.persist);
+
+  const configPanel = makePanel("Model & Timing");
+  addField(configPanel.layout, "Model XML", config.modelInput);
+  addField(configPanel.layout, "Interval ms", config.interval);
+  addField(configPanel.layout, "TCN window", config.windowInput);
+  addField(configPanel.layout, "Raw log path", config.rawOutput);
+  addField(configPanel.layout, "Feature log path", config.featureOutput);
+
+  const actionPanel = makePanel("Controls");
+  const startTrain = makeButton("Start Training Capture");
+  const startInfer = makeButton("Start NPU Inference");
+  const refresh = makeButton("Probe Status");
+  const stop = makeButton("Stop Engine");
+  const logLabel = makeLabel("ready", "logText");
+
   startTrain.addEventListener("clicked", () => {
-    startDaemon(ferriteArgs("train", modelInput.text(), false), { state, status, command });
+    startDaemon("train", config, cards, logLabel);
   });
-
-  const startInfer = new QPushButton();
-  startInfer.setText("Start Inference");
   startInfer.addEventListener("clicked", () => {
-    startDaemon(ferriteArgs("infer", modelInput.text(), true), { state, status, command });
+    startDaemon("infer", config, cards, logLabel);
   });
-
-  const refresh = new QPushButton();
-  refresh.setText("Status Once");
   refresh.addEventListener("clicked", () => {
     runOnce(["--mode", "infer", "--baseline-predictor", "--status-once", "--no-predictions"], result => {
-      setText(status, result.stdout || result.stderr || `exit ${result.code}`);
+      const parsed = parseStatusLine(result.stdout);
+      updateStatusCards(parsed, cards);
+      appendLog(logLabel, result.stdout || result.stderr || `exit ${result.code}`);
     });
   });
+  stop.addEventListener("clicked", () => stopDaemon(cards, logLabel));
 
-  const stop = new QPushButton();
-  stop.setText("Stop");
-  stop.addEventListener("clicked", () => stopDaemon({ state, status, command }));
+  [startTrain, startInfer, refresh, stop].forEach(button => actionPanel.layout.addWidget(button));
+
+  const commandPanel = makePanel("Command");
+  commandPanel.layout.addWidget(cards.command);
+
+  const logPanel = makePanel("Event Stream");
+  logPanel.layout.addWidget(logLabel);
 
   [
+    eyebrow,
     title,
-    modelLabel,
-    modelInput,
-    startTrain,
-    startInfer,
-    refresh,
-    stop,
-    makeLabel("State"),
-    state,
-    makeLabel("Status"),
-    status,
-    makeLabel("Command"),
-    command,
+    subtitle,
+    statusPanel.panel,
+    configPanel.panel,
+    actionPanel.panel,
+    commandPanel.panel,
+    logPanel.panel,
   ].forEach(widget => layout.addWidget(widget));
 
   root.setStyleSheet(`
@@ -161,32 +283,86 @@ function main() {
       padding: 18px;
       flex-direction: column;
       gap: 10px;
-      background-color: #101214;
-      color: #e8ecef;
+      background-color: #071014;
+      color: #eaf8ff;
+      font-family: Consolas;
+    }
+    #eyebrow {
+      color: #46f0c2;
+      font-size: 11px;
+      letter-spacing: 0px;
     }
     #title {
-      font-size: 24px;
+      color: #f1fbff;
+      font-size: 28px;
       font-weight: bold;
-      margin-bottom: 8px;
+    }
+    #subtitle {
+      color: #8fa8b3;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    #panel {
+      padding: 12px;
+      border: 1px solid #1d3b45;
+      background-color: #0b171d;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #panelTitle {
+      color: #54d6ff;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    #metricRow {
+      flex-direction: row;
+      gap: 12px;
+      min-height: 24px;
+    }
+    #metricName {
+      color: #78919b;
+      min-width: 140px;
+    }
+    #metricValue, #stateValue {
+      color: #e9fbff;
+      font-weight: bold;
+    }
+    #stateValue {
+      color: #5cffb1;
+    }
+    #fieldLabel {
+      color: #78919b;
+      margin-top: 4px;
+    }
+    #commandText, #logText {
+      color: #b9f6ff;
+      background-color: #050b0e;
+      padding: 8px;
+      border: 1px solid #16333d;
+      font-size: 12px;
     }
     QLabel {
-      color: #d7dde2;
+      color: #d7edf4;
       font-size: 13px;
     }
     QLineEdit {
       padding: 8px;
-      border: 1px solid #394047;
-      background-color: #171a1d;
-      color: #f4f7f9;
+      border: 1px solid #244650;
+      background-color: #081115;
+      color: #f4fdff;
+      min-height: 22px;
     }
     QPushButton {
       padding: 10px;
-      border: 1px solid #47515a;
-      background-color: #23282d;
-      color: #f4f7f9;
+      border: 1px solid #2e6371;
+      background-color: #10242b;
+      color: #eefcff;
+      min-height: 28px;
     }
     QPushButton:hover {
-      background-color: #2e363d;
+      background-color: #17333d;
+      border: 1px solid #48d7ff;
     }
   `);
 
