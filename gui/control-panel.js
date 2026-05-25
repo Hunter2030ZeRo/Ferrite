@@ -195,10 +195,13 @@ function main() {
 
   const root = new QWidget();
   root.setObjectName("root");
+  root.setMinimumSize(860, 1080);
+  root.resize(860, 1080);
   const layout = new FlexLayout();
   root.setLayout(layout);
   const scrollArea = new QScrollArea();
   scrollArea.setObjectName("scrollArea");
+  scrollArea.setInlineStyle("flex: 1; width: 100%; height: 100%;");
   scrollArea.setWidget(root);
   scrollArea.setWidgetResizable(true);
 
