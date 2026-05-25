@@ -8,6 +8,7 @@ const {
   QLineEdit,
   QScrollArea,
   FlexLayout,
+  QSizePolicyPolicy,
 } = require("@nodegui/nodegui");
 
 const rootDir = path.resolve(__dirname, "..");
@@ -146,6 +147,7 @@ function stopDaemon(cards, logLabel) {
 function makeLabel(text, objectName) {
   const label = new QLabel();
   label.setText(text);
+  label.setWordWrap(true);
   if (objectName) {
     label.setObjectName(objectName);
   }
@@ -161,6 +163,7 @@ function makeInput(value) {
 function makeButton(text) {
   const button = new QPushButton();
   button.setText(text);
+  button.setMinimumSize(240, 56);
   return button;
 }
 
@@ -195,8 +198,8 @@ function main() {
 
   const root = new QWidget();
   root.setObjectName("root");
-  root.setMinimumSize(860, 1080);
-  root.resize(860, 1080);
+  root.setMinimumHeight(1980);
+  root.setSizePolicy(QSizePolicyPolicy.Expanding, QSizePolicyPolicy.MinimumExpanding);
   const layout = new FlexLayout();
   root.setLayout(layout);
   const scrollArea = new QScrollArea();
@@ -354,6 +357,12 @@ function main() {
       border: 1px solid #16333d;
       font-size: 12px;
     }
+    #commandText {
+      min-height: 48px;
+    }
+    #logText {
+      min-height: 180px;
+    }
     QLabel {
       color: #d7edf4;
       font-size: 13px;
@@ -370,7 +379,7 @@ function main() {
       border: 1px solid #2e6371;
       background-color: #10242b;
       color: #eefcff;
-      min-height: 28px;
+      min-height: 48px;
     }
     QPushButton:hover {
       background-color: #17333d;
