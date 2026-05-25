@@ -1,0 +1,9 @@
+/target
+node_modules/
+.codegraph/
+.vscode/
+
+*.log
+ferrite_log.csv
+ferrite_prediction_log.csv
+ferrite_tcn_features.csv

@@ -1,0 +1,13 @@
+{
+  "name": "ferrite-control-panel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "core:build": "cargo build",
+    "gui": ".\\node_modules\\@nodegui\\qode\\binaries\\qode.exe gui/control-panel.js"
+  },
+  "dependencies": {
+    "@nodegui/nodegui": "^0.72.0"
+  }
+}
