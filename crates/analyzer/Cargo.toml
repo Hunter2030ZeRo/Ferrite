@@ -1,0 +1,12 @@
+[package]
+name = "ferrite-analyzer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ferrite-metrics.workspace = true
+
+[lints]
+workspace = true
