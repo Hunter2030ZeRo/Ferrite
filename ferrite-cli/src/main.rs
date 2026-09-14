@@ -4,7 +4,7 @@ compile_error!("ferrite-cli v0.1 currently supports Linux only");
 #[cfg(target_os = "linux")]
 fn main() -> std::io::Result<()> {
     use ferrite_analyzer::PowerAnalyzer;
-    use ferrite_metrics::{BatteryStatus, RuntimePmStatus};
+    use ferrite_metrics::BatteryStatus;
     use ferrite_platform::linux::LinuxTelemetry;
     use ferrite_policy::PolicyEngine;
     use ferrite_predictor::{HeuristicPredictor, Predictor};
@@ -70,7 +70,7 @@ fn main() -> std::io::Result<()> {
     println!();
     println!("Workload  {:?} ({:.0}% confidence)", prediction.class, prediction.confidence * 100.0);
     println!(
-        "Proposed  EPP={:?}, max_perf={}%%  [NOT APPLIED]",
+        "Proposed  EPP={:?}, max_perf={}%  [NOT APPLIED]",
         desired.epp, desired.max_performance_percent
     );
 
