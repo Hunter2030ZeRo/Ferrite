@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  push:
+    branches: [main, codex/linux-reboot]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use stable Rust
+        run: rustup default stable
+      - name: Test workspace
+        run: cargo test --workspace

@@ -1,6 +1,30 @@
-[package]
-name = "ferrite"
+[workspace]
+resolver = "2"
+members = [
+    "crates/metrics",
+    "crates/platform",
+    "crates/analyzer",
+    "crates/predictor",
+    "crates/policy",
+    "crates/actuator",
+    "ferrited",
+    "ferrite-cli",
+]
+default-members = ["ferrited", "ferrite-cli"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/Hunter2030ZeRo/Ferrite"
 
-[dependencies]
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+ferrite-metrics = { path = "crates/metrics" }
+ferrite-platform = { path = "crates/platform" }
+ferrite-analyzer = { path = "crates/analyzer" }
+ferrite-predictor = { path = "crates/predictor" }
+ferrite-policy = { path = "crates/policy" }
+ferrite-actuator = { path = "crates/actuator" }

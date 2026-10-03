@@ -1,0 +1,16 @@
+[package]
+name = "ferrite-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ferrite-metrics.workspace = true
+ferrite-platform.workspace = true
+ferrite-analyzer.workspace = true
+ferrite-predictor.workspace = true
+ferrite-policy.workspace = true
+
+[lints]
+workspace = true
